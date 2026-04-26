@@ -151,7 +151,12 @@ void Shader::generate_imgui_editor()
 	ImGui::PopID();
 }
 
-Shader::Shader(std::string _vertex_path, std::string _fragment_path) : vertex_path(_vertex_path), fragment_path(_fragment_path)
+Shader::Shader(std::string _vertex_path, 
+			   std::string _fragment_path,
+			   std::string _compute_path) : 
+		vertex_path(_vertex_path), 
+		fragment_path(_fragment_path),
+		compute_path(_compute_path)
 {
 	//TODO: clean up paths implementation
 	//std::string backup_vert_path = vertex_path;
@@ -186,90 +191,97 @@ Shader::Shader(std::string _vertex_path, std::string _fragment_path) : vertex_pa
 	}
 }
 
-bool Shader::compile_shader_program()
+std::string get_shader_source(std::string filename)
 {
-	spdlog::info("Attempting to compile v: {} f: {}", vertex_path, fragment_path);
 
-	// 1. retrieve the vertex/fragment source code from filePath
-	std::string vertexCode;
-	std::string fragmentCode;
-	std::ifstream vShaderFile;
-	std::ifstream fShaderFile;
+}
+
+// TODO allow to recurisively open referenced files
+//TODO: so that's prob next with this is to pull in all the recursive files with a 
+GLuint compile_shader(std::string filename, GLenum shader_type, GLint& shader_id)
+{
+	std::string shaderCode;
+	std::ifstream shaderFile;
 	// ensure ifstream objects can throw exceptions:
-	vShaderFile.exceptions(std::ifstream::failbit | std::ifstream::badbit);
-	fShaderFile.exceptions(std::ifstream::failbit | std::ifstream::badbit);
+	shaderFile.exceptions(std::ifstream::failbit | std::ifstream::badbit);
 	try
 	{
 		// open files
-		vShaderFile.open(vertex_path.c_str());
-		fShaderFile.open(fragment_path.c_str());
-		std::stringstream vShaderStream, fShaderStream;
+		shaderFile.open(filename.c_str());
+		std::stringstream shaderStream;
 		// read file's buffer contents into streams
-		vShaderStream << vShaderFile.rdbuf();
-		fShaderStream << fShaderFile.rdbuf();
+		shaderStream << shaderFile.rdbuf();
 		// close file handlers
-		vShaderFile.close();
-		fShaderFile.close();
+		shaderFile.close();
 		// convert stream into string
-		vertexCode = vShaderStream.str();
-		fragmentCode = fShaderStream.str();
+		shaderCode = shaderStream.str();
 	}
 	catch (std::ifstream::failure e)
 	{
 		spdlog::error("SHADER::FILE_NOT_SUCCESFULLY_READ");
 		return false;
 	}
-	const char* vShaderCode = vertexCode.c_str();
-	const char* fShaderCode = fragmentCode.c_str();
+	const char* shaderCode_cptr = shaderCode.c_str();
 
-	// 2. compile shaders
-	unsigned int vertex, fragment;
+	// 2. compile shader
 	int success;
 	char infoLog[512];
 
 	// vertex Shader
-	vertex = glCreateShader(GL_VERTEX_SHADER);
-	glShaderSource(vertex, 1, &vShaderCode, NULL);
-	glCompileShader(vertex);
+	shader_id = glCreateShader(shader_type);
+	glShaderSource(shader_id, 1, &shaderCode_cptr, NULL);
+	glCompileShader(shader_id);
 	// print compile errors if any
-	glGetShaderiv(vertex, GL_COMPILE_STATUS, &success);
+	glGetShaderiv(shader_id, GL_COMPILE_STATUS, &success);
 	if (!success)
 	{
-		glGetShaderInfoLog(vertex, 512, NULL, infoLog);
-		spdlog::error("SHADER::VERTEX::COMPILATION_FAILED:\n{}", infoLog);
+		glGetShaderInfoLog(shader_id, 512, NULL, infoLog);
+		spdlog::error("shader compilation failure:\n{}", infoLog);
 		return false;
 	};
 
-	// similiar for Fragment Shader
-	fragment = glCreateShader(GL_FRAGMENT_SHADER);
-	glShaderSource(fragment, 1, &fShaderCode, NULL);
-	glCompileShader(fragment);
-	// print compile errors if any
-	glGetShaderiv(fragment, GL_COMPILE_STATUS, &success);
-	if (!success)
-	{
-		glGetShaderInfoLog(fragment, 512, NULL, infoLog);
-		spdlog::error("ERROR::SHADER::FRAGMENT::COMPILATION_FAILED:\n{}", infoLog);
-		return false;
-	};
+	return true;
+}
+
+bool Shader::compile_shader_program()
+{
+	spdlog::info("Attempting to compile v: {} f: {} c: {}", vertex_path, fragment_path, compute_path);
+
+	bool has_vertex = vertex_path != "";
+	bool has_fragment = fragment_path != "";
+	bool has_compute = compute_path != "";
+
+	GLint vertex;
+	GLint fragment;
+	GLint compute;
+
+	if (has_vertex)   compile_shader(vertex_path, GL_VERTEX_SHADER, vertex);
+	if (has_fragment) compile_shader(fragment_path, GL_FRAGMENT_SHADER, fragment);
+	if (has_compute)  compile_shader(compute_path, GL_COMPUTE_SHADER, compute);
 
 	// shader Program
 	ID = glCreateProgram();
-	glAttachShader(ID, vertex);
-	glAttachShader(ID, fragment);
+	if (has_vertex)   glAttachShader(ID, vertex);
+	if (has_fragment) glAttachShader(ID, fragment);
+	if (has_compute)  glAttachShader(ID, compute);
 	glLinkProgram(ID);
+	
 	// print linking errors if any
+	int success;
 	glGetProgramiv(ID, GL_LINK_STATUS, &success);
 	if (!success)
 	{
-		glGetProgramInfoLog(ID, 512, NULL, infoLog);
+		const int max_str_len = 512;
+		char infoLog[max_str_len];
+		glGetProgramInfoLog(ID, max_str_len, NULL, infoLog);
 		spdlog::error("SHADER::PROGRAM::LINKING_FAILED:\n{}", infoLog);
 		return false;
 	}
 
 	// delete the shaders as they're linked into our program now and no longer necessary
-	glDeleteShader(vertex);
-	glDeleteShader(fragment);
+	if (has_vertex)   glDeleteShader(vertex);
+	if (has_fragment) glDeleteShader(fragment);
+	if (has_compute)  glDeleteShader(compute);
 
 	return true;
 }
@@ -294,11 +306,12 @@ void Shader::generate_uniform_table()
 
 	for (int i = 0; i < uniform_count; i++)
 	{
-		char info_string[20];
+		int max_str_length = 40;
+		char info_string[max_str_length];
 		GLsizei actual_length;
 		GLsizei actual_size;
 		GLenum gl_type;
-		glGetActiveUniform(ID, i, 20, &actual_length, &actual_size, &gl_type, info_string);
+		glGetActiveUniform(ID, i, max_str_length, &actual_length, &actual_size, &gl_type, info_string);
 		std::string uniform_name = std::string(info_string, actual_length);
 		spdlog::debug("Uniform - {}\tsize- {}\ttype - {}", uniform_name, actual_size, gl_type);
 

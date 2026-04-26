@@ -151,6 +151,9 @@ texture::texture(std::string path, int width, int height, int channels, int byte
 		spdlog::error("Failed to load texture from raw file: {}", path);
 		throw new std::invalid_argument("Failed to load texture from raw file.");
 	}
+
+	//TODO: you need a cleaner solution for this: I.e probably stbimage
+	glPixelStoref(GL_UNPACK_SWAP_BYTES, 0);
 }
 
 void texture::generate_mipmaps()

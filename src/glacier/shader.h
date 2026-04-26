@@ -72,12 +72,15 @@ public:
 	unsigned int ID;
 	std::string vertex_path;
 	std::string fragment_path;
+	std::string compute_path;
 	bool navigate_to_source_directory = true;
 	//consider using map using name
 	std::vector<struct uniform_descriptor> uniform_list;
 
 	// constructor reads and builds the shader
-	Shader(std::string _vertex_path, std::string _fragment_path);
+	Shader(std::string _vertex_path, 
+		   std::string _fragment_path,
+		   std::string _compute_path = "");
 
 private:
 	bool compile_shader_program();
