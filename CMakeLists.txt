@@ -1,122 +1,112 @@
-# This will set the minimum version of CMake required to generate the projects
-# CMakeLists has its own language and features and as more and more versions are 
-# added it will include new keywords and options
-cmake_minimum_required(VERSION 3.18) 
+cmake_minimum_required(VERSION 3.16)
+project(glacier VERSION 1.0 LANGUAGES C CXX)
 
-#navigate to ./build
-#cmake -G"Visual Studio 15 2017 Win64" ..
-#cmake --build .
+enable_testing()
 
-# This will give our project a name
-project(glacier)
+set(CMAKE_CXX_STANDARD 20)
+set(CMAKE_CXX_STANDARD_REQUIRED ON)
+set(CMAKE_EXPORT_COMPILE_COMMANDS ON)
 
-# This instructs CMake that we want to generate an executable file from this project
-# Other options would be add_library but this is a topic for another time
-# You can notice that we also pass on the path to our cpp file
-add_executable(glacier)
+find_package(Freetype REQUIRED)
+find_package(OpenGL REQUIRED)
+find_package(glfw3)
 
-target_sources(glacier  PRIVATE src/main.cpp
-                        src/camera.cpp
-                        src/element.cpp
-                        src/glad.c
-                        src/ray_trace.cpp
-                        src/shader_stage.cpp
-                        src/shader.cpp
-                        src/terrain.cpp
-                        src/framebuffer.cpp
-                        src/texture.cpp
-                        src/triangles.cpp
-                        src/imgui/imgui_demo.cpp
-                        src/imgui/imgui_draw.cpp
-                        src/imgui/imgui_impl_glfw.cpp
-                        src/imgui/imgui_impl_opengl3.cpp
-                        src/imgui/imgui_tables.cpp
-                        src/imgui/imgui_widgets.cpp
-                        src/imgui/imgui.cpp
-                        )
-
-message(STATUS ${PROJECT_SOURCE_DIR})
-
-set(MY_RESOURCE_FILES 
-                        src/vertex.glsl
-                        src/fragment.glsl
-                        src/ray_trace_viewer.glsl
-                        src/scattering_media.glsl
-                        src/simple_fs_shader.glsl
-                        src/terrain.glsl
-                        src/test_fullscreen_shader.glsl
-                        src/arb_function.glsl
-
-                        src/grass.glsl
-
-                        content/noise.png
-                        content/noise_perlin.png
-
-                        content/N19W156.hgt
-                        content/N19W157.hgt
-                        content/N20W156.hgt
-                        content/N20W157.hgt
-                        content/N32W111.hgt
-                        content/N32W112.hgt
-                        content/N31W111.hgt
-                        content/N31W112.hgt
-                        content/N34W118.hgt
-                        content/N34W119.hgt
-                        content/N35W118.hgt
-                        content/N35W119.hgt
-                        content/N39W106.hgt
-                        content/N39W107.hgt
-                        content/N40W106.hgt
-                        content/N40W107.hgt
-                    )
-
-#file(GLOB_RECURSE
-#                        MY_RESOURCE_FILES
-#                        RELATIVE ${CMAKE_CURRENT_SOURCE_DIR} 
-#                        CONFIGURE_DEPENDS
-#
-#                        ${CMAKE_CURRENT_SOURCE_DIR}/resources/**.ttf    # adapt these to your needs
-#                        ${CMAKE_CURRENT_SOURCE_DIR}/resources/**.svg
-#                    )
-
-#FOREACH(MY_RESOURCE_FILE ${MY_RESOURCE_FILES})
-#    add_custom_command(
-#        TARGET ${PROJECT_NAME} POST_BUILD
-#        COMMAND ${CMAKE_COMMAND} -E copy 
-#            ${PROJECT_SOURCE_DIR}/${MY_RESOURCE_FILE}
-#            $<TARGET_FILE_DIR:${PROJECT_NAME}>
-#        DEPENDS ${PROJECT_SOURCE_DIR}/${MY_RESOURCE_FILE}
-#    )
-#ENDFOREACH()
-
-FOREACH(MY_RESOURCE_FILE ${MY_RESOURCE_FILES})
-    add_custom_command(
-        OUTPUT ${CMAKE_CURRENT_BINARY_DIR}/${MY_RESOURCE_FILE}
-        COMMAND ${CMAKE_COMMAND} -E copy_if_different
-            ${CMAKE_CURRENT_SOURCE_DIR}/${MY_RESOURCE_FILE}
-            $<TARGET_FILE_DIR:${PROJECT_NAME}>
-        DEPENDS ${CMAKE_CURRENT_SOURCE_DIR}/${MY_RESOURCE_FILE}
-  )
-ENDFOREACH()
-
-list(TRANSFORM MY_RESOURCE_FILES PREPEND ${CMAKE_CURRENT_BINARY_DIR}/)
-
-target_sources(glacier PRIVATE ${MY_RESOURCE_FILES})
-
-target_include_directories(glacier
-    PRIVATE
-        # where the library itself will look for its internal headers
-        ${PROJECT_SOURCE_DIR}/src
-        ${PROJECT_SOURCE_DIR}/src/imgui
-        ${PROJECT_SOURCE_DIR}/../include
+file(GLOB_RECURSE GLACIER_SOURCES
+    "${PROJECT_SOURCE_DIR}/src/glacier/*.cpp"
 )
 
-target_link_libraries(glacier
-    PRIVATE
-        #libs
-        libglfw.so.3
-        GL
+# add glad.c - a generated file.
+list(APPEND GLACIER_SOURCES
+    "${PROJECT_SOURCE_DIR}/src/glacier/glad.c"
 )
 
-set(CMAKE_CXX_STANDARD 11)
-set(CMAKE_CXX_STANDARD_REQUIRED True)
+file(GLOB_RECURSE IMGUI_SOURCES
+    "${PROJECT_SOURCE_DIR}/src/imgui/imgui.cpp"
+    "${PROJECT_SOURCE_DIR}/src/imgui/imgui_demo.cpp"
+    "${PROJECT_SOURCE_DIR}/src/imgui/imgui_draw.cpp"
+    "${PROJECT_SOURCE_DIR}/src/imgui/imgui_tables.cpp"
+    "${PROJECT_SOURCE_DIR}/src/imgui/imgui_widgets.cpp"
+    "${PROJECT_SOURCE_DIR}/src/imgui/backends/imgui_impl_glfw.cpp"
+    "${PROJECT_SOURCE_DIR}/src/imgui/backends/imgui_impl_opengl3.cpp"
+    "${PROJECT_SOURCE_DIR}/src/imgui/misc/freetype/imgui_freetype.cpp"
+    "${PROJECT_SOURCE_DIR}/src/imgui/misc/cpp/imgui_stdlib.cpp"
+)
+
+file(GLOB_RECURSE SHADER_SOURCES
+    "${PROJECT_SOURCE_DIR}/src/glacier/*.glsl"
+    "${PROJECT_SOURCE_DIR}/src/target/demo_0/*.glsl"
+)
+
+file(GLOB_RECURSE CONTENT_FILES
+    "${PROJECT_SOURCE_DIR}/content/*"
+)
+
+add_library(glacier_lib STATIC
+    ${GLACIER_SOURCES}
+    ${IMGUI_SOURCES}
+)
+
+target_include_directories(glacier_lib PUBLIC
+    ${PROJECT_SOURCE_DIR}/src
+    ${PROJECT_SOURCE_DIR}/src/glacier
+    ${PROJECT_SOURCE_DIR}/src/imgui
+    ${PROJECT_SOURCE_DIR}/src/imgui/backends
+    ${PROJECT_SOURCE_DIR}/src/imgui/misc/freetype
+    ${PROJECT_SOURCE_DIR}/src/imgui/misc/cpp
+    ${PROJECT_SOURCE_DIR}/include
+    ${PROJECT_SOURCE_DIR}/include/glm
+    ${PROJECT_SOURCE_DIR}/include/spdlog/include
+    ${PROJECT_SOURCE_DIR}/include/SimpleJSON
+    ${PROJECT_SOURCE_DIR}/include/glad
+    ${PROJECT_SOURCE_DIR}/include/stb_image
+    ${PROJECT_SOURCE_DIR}/include/KHR
+)
+
+target_include_directories(glacier_lib PRIVATE
+    ${FREETYPE_INCLUDE_DIRS}
+    ${GLFW_INCLUDE_DIRS}
+)
+
+target_link_libraries(glacier_lib PUBLIC
+    glfw
+    Freetype::Freetype
+    OpenGL::GL
+    pthread
+    dl
+)
+
+target_compile_options(glacier_lib PRIVATE -Wall -Wextra)
+# Only keep the line below if GLAD is being built as a shared (.so) library
+#target_compile_definitions(glacier_lib PRIVATE GLAD_GLAPI_EXPORT_BUILD)
+
+# later add target for demo_1 sources
+add_executable(demo_1 "${PROJECT_SOURCE_DIR}/src/target/demo_1/main.cpp")
+target_link_libraries(demo_1 PRIVATE glacier_lib)
+
+
+# Find all content files recursively and track changes
+file(GLOB_RECURSE SHADER_SOURCES CONFIGURE_DEPENDS "${PROJECT_SOURCE_DIR}/src/*.glsl")
+file(GLOB_RECURSE FONT_FILES CONFIGURE_DEPENDS "${PROJECT_SOURCE_DIR}/src/*.ttf")
+
+list(APPEND ALL_CONTENT ${SHADER_SOURCES} ${FONT_FILES})
+
+# Loop through each file to copy them while keeping the folder structure
+foreach(FILE_PATH ${ALL_CONTENT})
+    # Get the path relative to the asset root folder
+    file(RELATIVE_PATH REL_PATH "${PROJECT_SOURCE_DIR}/src" ${FILE_PATH})
+    
+    # Define the final destination path in the build directory
+    set(DEST_PATH "${CMAKE_BINARY_DIR}/${REL_PATH}")
+
+    # Add command to copy the file after MyExecutable builds
+    add_custom_command(TARGET demo_1 POST_BUILD
+        COMMAND ${CMAKE_COMMAND} -E copy_if_different ${FILE_PATH} ${DEST_PATH}
+        VERBATIM
+    )
+    
+endforeach()
+
+file(GLOB_RECURSE CONTENT_OTHER CONFIGURE_DEPENDS "${PROJECT_SOURCE_DIR}/content/*")
+file(COPY ${CONTENT_OTHER} DESTINATION "${CMAKE_BINARY_DIR}/content")
+
+#add_test(NAME DataTest COMMAND my_test_bin WORKING_DIRECTORY ${CMAKE_CURRENT_SOURCE_DIR})
