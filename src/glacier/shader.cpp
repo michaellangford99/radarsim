@@ -1,5 +1,12 @@
 #include "shader.h"
 
+#include <string>
+#include <fstream>
+#include <sstream>
+#include <regex>
+#include <filesystem>
+#include <spdlog/spdlog.h>
+
 void Shader::generate_imgui_editor()
 {	
 	//std::string sep_text = "Shader: [vert]:'" + vertex_path + "',[frag]:'" + fragment_path + "'";
@@ -193,34 +200,52 @@ Shader::Shader(std::string _vertex_path,
 
 std::string get_shader_source(std::string filename)
 {
+    std::string shaderCode;
+    std::ifstream shaderFile;
+    shaderFile.exceptions(std::ifstream::failbit | std::ifstream::badbit);
+    try
+    {
+        shaderFile.open(filename.c_str());
+        std::stringstream shaderStream;
+        shaderStream << shaderFile.rdbuf();
+        shaderFile.close();
+        shaderCode = shaderStream.str();
+    }
+    catch (std::ifstream::failure e)
+    {
+        spdlog::error("SHADER::FILE_NOT_SUCCESFULLY_READ: {}", filename);
+        return "";
+    }
 
+    // Resolve includes relative to the current file's directory
+    std::filesystem::path baseDir = std::filesystem::path(filename).parent_path();
+
+    std::regex includeRegex("#include\\s+\"([^\"]+)\"");
+    std::smatch match;
+    std::string result;
+    std::string remaining = shaderCode;
+
+    while (std::regex_search(remaining, match, includeRegex))
+    {
+        // Append everything before the #include line
+        result += match.prefix().str();
+
+        std::string includedFilename = (baseDir / match[1].str()).string();
+        std::string includedSource = get_shader_source(includedFilename);
+        result += includedSource;
+
+        remaining = match.suffix().str();
+    }
+
+    // Append whatever is left after the last match
+    result += remaining;
+
+    return result;
 }
 
-// TODO allow to recurisively open referenced files
-//TODO: so that's prob next with this is to pull in all the recursive files with a 
 GLuint compile_shader(std::string filename, GLenum shader_type, GLint& shader_id)
 {
-	std::string shaderCode;
-	std::ifstream shaderFile;
-	// ensure ifstream objects can throw exceptions:
-	shaderFile.exceptions(std::ifstream::failbit | std::ifstream::badbit);
-	try
-	{
-		// open files
-		shaderFile.open(filename.c_str());
-		std::stringstream shaderStream;
-		// read file's buffer contents into streams
-		shaderStream << shaderFile.rdbuf();
-		// close file handlers
-		shaderFile.close();
-		// convert stream into string
-		shaderCode = shaderStream.str();
-	}
-	catch (std::ifstream::failure e)
-	{
-		spdlog::error("SHADER::FILE_NOT_SUCCESFULLY_READ");
-		return false;
-	}
+	std::string shaderCode = get_shader_source(filename);
 	const char* shaderCode_cptr = shaderCode.c_str();
 
 	// 2. compile shader
@@ -274,7 +299,7 @@ bool Shader::compile_shader_program()
 		const int max_str_len = 512;
 		char infoLog[max_str_len];
 		glGetProgramInfoLog(ID, max_str_len, NULL, infoLog);
-		spdlog::error("SHADER::PROGRAM::LINKING_FAILED:\n{}", infoLog);
+		spdlog::error("SHADER::PROGRAM::LINKING_FAILED:\n{}", infoLog);//fix this and the error return process
 		return false;
 	}
 
@@ -316,6 +341,11 @@ void Shader::generate_uniform_table()
 		spdlog::debug("Uniform - {}\tsize- {}\ttype - {}", uniform_name, actual_size, gl_type);
 
 		struct uniform_descriptor desc = { gl_type, uniform_name, actual_size /*intentionally skip local variable initialization*/ };
+
+		//TODO: right here, need to handle case where 'actual_size' is not 1.
+		// this means there's an array of that value, and we need to break that out into different uniforms somehow.
+		// did this last time by creating a stringified name for each.
+		// maybe there's a bette way though.
 
 		desc.min = -1;
 		desc.max = 1;
