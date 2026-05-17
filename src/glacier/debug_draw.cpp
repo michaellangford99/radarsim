@@ -33,12 +33,12 @@ debug_draw::debug_draw() {
     }
 
     FT_Face face;
-    if (FT_New_Face(ft, "Ubuntu-R.ttf", 0, &face))
+    if (FT_New_Face(ft, "content/Ubuntu-R.ttf", 0, &face))
     {
         throw std::runtime_error("Failed to load font");
     }
 
-    FT_Set_Pixel_Sizes(face, 0, 13*2); 
+    FT_Set_Pixel_Sizes(face, 0, 12); 
 
     glPixelStorei(GL_UNPACK_ALIGNMENT, 1); // disable byte-alignment restriction
   
@@ -123,7 +123,7 @@ void debug_draw::draw_str_queue(debug_draw_str_request& request, Camera& camera)
     //temps:
     float x = request.vp_pos.x;
     float y = request.vp_pos.y;
-    float scale = 0.5;
+    float scale = 1.0;
 
     glm::vec4& color = request.color;
     std::string& text = request.text;

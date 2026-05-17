@@ -51,6 +51,11 @@ public:
 	//void modify_data(int index, std::vector<vertex> vertices);//sub buffers
 	void draw();
 
+	const unsigned int& get_VAO()
+	{
+		return VAO;
+	}
+
 	~triangle_geometry();
 };
 
