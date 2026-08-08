@@ -1,7 +1,7 @@
-#include "imgui/imgui.h"
-#include "imgui/backends/imgui_impl_glfw.h"
-#include "imgui/backends/imgui_impl_opengl3.h"
-#include "imgui/imgui_internal.h"
+#include <imgui.h>
+#include <backends/imgui_impl_glfw.h>
+#include <backends/imgui_impl_opengl3.h>
+#include <imgui_internal.h>
 
 #define IMGUI_USER_CONFIG
 #define IMGUI_ENABLE_FREETYPE
@@ -20,9 +20,7 @@
 #include "triangles.h"
 #include "line.h"
 #include "shader.h"
-#include "terrain.h"
 #include "texture.h"
-#include "volume.h"
 #include "debug_draw.h"
 
 #include "glacier.h"
@@ -50,6 +48,8 @@ GLFWwindow* glacier::create_glfw_window(int width, int height)
 		return NULL;
 	}
 	glfwMakeContextCurrent(window);
+
+	glfwSwapInterval(1); 
 
 	if (!gladLoadGLLoader((GLADloadproc)glfwGetProcAddress))
 	{
@@ -92,8 +92,8 @@ void glacier::setup_imgui(GLFWwindow* window)
 	imf.OversampleH = 3;
 	imf.OversampleV = 3;
 	imf.PixelSnapH = true;
-	//io.Fonts->AddFontFromFileTTF("imgui/misc/fonts/DroidSans.ttf", 14.5);
-	io.Fonts->AddFontFromFileTTF("Ubuntu-R.ttf", 13);
+	//io.Fonts->AddFontFromFileTTF(<misc/fonts/DroidSans.ttf>, 14.5);
+	io.Fonts->AddFontFromFileTTF("content/Ubuntu-R.ttf", 13);
 
 	ImGui::StyleColorsDark();
 	ImGuiStyle& style = ImGui::GetStyle();
@@ -108,31 +108,6 @@ void glacier::setup_imgui(GLFWwindow* window)
 	style.Colors[ImGuiCol_TitleBg]                = ImVec4(0.28f, 0.28f, 0.28f, 1.00f);
 
 	ImGui::GetIO().ConfigFlags |= ImGuiConfigFlags_DockingEnable;
-}
-
-void glacier::recurse_imgui_tree(std::shared_ptr<element> e)
-{
-	e->generate_imgui_editor();
-
-	int c_idx = 0;
-	for (auto &c : e->children)
-	{
-		if (ImGui::TreeNode(("element "+std::to_string(c_idx++)).c_str()))
-		{
-			recurse_imgui_tree(c);
-
-			ImGui::TreePop();
-			ImGui::Spacing();
-		}
-	}
-}
-
-void glacier::generate_tree_imgui_editor(std::shared_ptr<element> root)
-{
-	if (root)
-	{
-		recurse_imgui_tree(root);
-	}
 }
 
 void glacier::imgui_init()
@@ -160,11 +135,6 @@ void glacier::imgui_cleanup()
 	ImGui_ImplOpenGL3_RenderDrawData(ImGui::GetDrawData());
 }
 
-/*void glacier::generate_imgui_windows()
-{
-
-}*/
-
 glacier::glacier() : glacier(800, 600)
 {
 
@@ -172,7 +142,7 @@ glacier::glacier() : glacier(800, 600)
 
 glacier::glacier(int width, int height)
 {
-	spdlog::set_level(spdlog::level::debug); // Set *global* log level to debug
+	spdlog::set_level(spdlog::level::info); // Set *global* log level to debug
 	
 	window_size = {width, height};
 

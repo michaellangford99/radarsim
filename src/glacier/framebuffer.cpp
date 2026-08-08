@@ -1,5 +1,13 @@
 #include "framebuffer.h"
 
+#include <glad/glad.h> 
+#include <GLFW/glfw3.h>
+#include <memory>
+#include "texture.h"
+#include "debug.h"
+
+#include <iostream>
+
 framebuffer::framebuffer(unsigned int width, unsigned int height, std::shared_ptr<texture> tex) : width(width), height(height), fb_texture(tex)
 {
     glGenFramebuffers(1, &ID_framebuffer);

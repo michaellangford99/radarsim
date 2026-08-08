@@ -102,6 +102,7 @@ debug_draw::debug_draw() {
     text_shader = std::make_unique<Shader>("glacier/text_vertex.glsl", "glacier/text_fragment.glsl");    
 }
 
+// need camera to compute projected positiong?? huh?? this should be queued
 void debug_draw::draw_string(std::string text, glm::vec3 world_pos, glm::vec4 color, Camera& camera)
 {
     glm::vec4 proj_pos = (camera.projection * camera.view * glm::vec4(world_pos, 1.0));
@@ -183,6 +184,7 @@ void debug_draw::draw_line(glm::vec3 start, glm::vec3 end, glm::vec3 color) {
     ddr.world = glm::mat4(1.0);
 
     //TODO: this is dog crap and doesnt work
+    
 
     debug_draw_queue.push_back(ddr);
 }

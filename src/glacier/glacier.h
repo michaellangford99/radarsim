@@ -12,7 +12,6 @@
 #include <iostream>
 
 #include "camera.h"
-#include "element.h"
 
 #include <glm/glm.hpp>
 #include <glm/gtc/matrix_transform.hpp>
@@ -44,8 +43,6 @@ public:
 	void set_active_camera(Camera* _active_camera);
 	void setup_callbacks(GLFWwindow* window);
 	void setup_imgui(GLFWwindow* window);
-	void recurse_imgui_tree(std::shared_ptr<element> e);
-	void generate_tree_imgui_editor(std::shared_ptr<element> root);
 	void imgui_init();
     void imgui_cleanup();
     //virtual void generate_imgui_windows();//TODO: implement callback cleanly
@@ -59,5 +56,28 @@ public:
 	static void scroll_callback(GLFWwindow* window, double xoffset, double yoffset);
 	static void processInput(GLFWwindow *window);
 };
+
+// inline void set_additive_blending()
+// {
+// 	glEnable(GL_BLEND);
+// 	glBlendEquation(GL_FUNC_ADD);
+// 	glBlendFunc(GL_ONE, GL_ONE);
+
+// 	//disable depth test?
+
+// 	glDisable(GL_DEPTH_TEST);
+// 	glDisable(GL_CULL_FACE);
+
+// 	// use this? glBlendFuncSeparate(GL_ONE, GL_ONE, GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA);
+// }
+
+// inline void set_normal_blending()
+// {
+
+// }
+
+// inline void set_premultiplied_alpha_blending() {}
+
+// //void disable_depth_write();
 
 #endif
