@@ -88,8 +88,15 @@ FetchContent_Declare(
 
 FetchContent_MakeAvailable(spdlog)
 
+#---- GDAL ----
+
+find_package(GDAL CONFIG REQUIRED)
+
+#--------------
+
 file(GLOB_RECURSE GLACIER_SOURCES
     "${PROJECT_SOURCE_DIR}/src/glacier/*.cpp"
+    "${PROJECT_SOURCE_DIR}/src/terrain/*.cpp"
 )
 
 # add glad.c - a generated file.
@@ -117,11 +124,14 @@ target_include_directories(glacier_lib PUBLIC
     ${PROJECT_SOURCE_DIR}/include/glad
     ${PROJECT_SOURCE_DIR}/include/stb_image
     ${PROJECT_SOURCE_DIR}/include/KHR
+    ${PROJECT_SOURCE_DIR}/src/radarlib
+    ${PROJECT_SOURCE_DIR}/src/terrain
 )
 
 target_include_directories(glacier_lib PRIVATE
     ${FREETYPE_INCLUDE_DIRS}
     ${GLFW_INCLUDE_DIRS}
+    ${GDAL_INCLUDE_DIRS}
 )
 
 # link type should be [PRIVATE probably to not leak dependencies
@@ -131,14 +141,13 @@ target_link_libraries(glacier_lib PUBLIC
     OpenGL::GL
     pthread
     dl
-    glm::glm
-    spdlog
+    GDAL::GDAL
 )
 
 target_link_libraries(glacier_lib PRIVATE 
     imgui
     implot
-    glm
+    glm::glm
     spdlog
 )
 
@@ -158,6 +167,7 @@ add_executable(viewer.gl
 target_include_directories(viewer.gl PUBLIC
     ${PROJECT_SOURCE_DIR}/src
     ${PROJECT_SOURCE_DIR}/src/glacier
+    ${PROJECT_SOURCE_DIR}/src/radarlib
     ${PROJECT_SOURCE_DIR}/include
     ${PROJECT_SOURCE_DIR}/include/glad
     ${PROJECT_SOURCE_DIR}/include/stb_image
